@@ -105,6 +105,7 @@ main(int argc, char *argv[])
   // Initialize the predictor
   init_predictor();
 
+  
   uint32_t num_branches = 0;
   uint32_t mispredictions = 0;
   uint32_t pc = 0;
@@ -120,7 +121,8 @@ main(int argc, char *argv[])
       mispredictions++;
     }
     if (verbose != 0) {
-      printf ("%d\n", prediction);
+      printf ("Prediction: %d\n", prediction);
+      printf("Outcome: %d\n", outcome);
     }
 
     // Train the predictor
@@ -132,8 +134,9 @@ main(int argc, char *argv[])
   printf("Incorrect:       %10d\n", mispredictions);
   float mispredict_rate = 100*((float)mispredictions / (float)num_branches);
   printf("Misprediction Rate: %7.3f\n", mispredict_rate);
-
+  
   // Cleanup
+  cleanup();
   fclose(stream);
   free(buf);
 
