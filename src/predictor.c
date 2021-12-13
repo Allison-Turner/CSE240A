@@ -6,13 +6,14 @@
 //  described in the README                               //
 //========================================================//
 #include <stdio.h>
+#include <stdlib.h>
 #include "predictor.h"
 
 //
 // TODO:Student Information
 //
 const char *studentName = "Allison Turner && James Yuan";
-const char *studentID   = "A59008979 &&";
+const char *studentID   = "A59008979 && A15707224";
 const char *email       = "aturner@ucsd.edu && z2yuan@ucsd.edu";
 
 //------------------------------------//
@@ -134,7 +135,15 @@ tournament_make_prediction(uint32_t pc)
 uint8_t
 custom_make_prediction(uint32_t pc)
 {
-  return NOTTAKEN;
+  //int myPrediction = make_prediction(pc, ghistoryBits, lhistoryBits);
+  FILE *fp;
+  char *commandLine;
+  sprintf(commandLine, "./NN.py predict %d %d %d", pc, ghistoryBits, lhistoryBits);
+  fp = popen(commandLine, "r");
+  char *predict;
+  fgets(predict, 2, fp);
+  pclose(fp);
+  return atoi(predict);
 }
 
 // Make a prediction for conditional branch instruction at PC 'pc'
@@ -240,7 +249,11 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome){
 
 void
 custom_train_predictor(uint32_t pc, uint8_t outcome){
-
+  FILE *fp;
+  char *commandLine;
+  sprintf(commandLine, "./NN.py train %d %d %d %d", pc, ghistoryBits, lhistoryBits, outcome);
+  fp = popen(commandLine, "r");
+  pclose(fp);
 }
 
 // Train the predictor the last executed branch at PC 'pc' and with
