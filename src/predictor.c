@@ -103,6 +103,8 @@ init_predictor()
 
     //custom TBD
     case CUSTOM:
+      FILE *fp = fopen("his.txt", "w");
+      fclose(fp);
       break;
       
     default:
@@ -250,9 +252,12 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome){
 void
 custom_train_predictor(uint32_t pc, uint8_t outcome){
   FILE *fp;
-  char *commandLine;
-  sprintf(commandLine, "./NN.py train %d %d %d %d", pc, ghistoryBits, lhistoryBits, outcome);
-  fp = popen(commandLine, "r");
+  fp = fopen("his.txt", "a");
+  fprintf(fp, "%d %d %d %d\n", pc, ghistoryBits, lhistoryBits, outcome);
+  fclose(fp);
+  // char *commandLine;
+  // sprintf(commandLine, "./NN.py train %d %d %d %d", pc, ghistoryBits, lhistoryBits, outcome);
+  fp = popen("./NN.py train", "r");
   pclose(fp);
 }
 
