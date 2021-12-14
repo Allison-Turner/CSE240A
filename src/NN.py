@@ -10,7 +10,6 @@ class NN(torch.nn.Module):
     def __init__(self):
         super(NN, self).__init__()
         self.fc1 = torch.nn.Linear(3, 2)
-        #self.fc2 = torch.nn.Linear(8, 2)
 
     def forward(self, input):
         x = self.fc1(input)
