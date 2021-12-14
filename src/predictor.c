@@ -12,7 +12,7 @@
 // TODO:Student Information
 //
 const char *studentName = "Allison Turner && James Yuan";
-const char *studentID   = "A59008979 &&";
+const char *studentID   = "A59008979 && A15707224";
 const char *email       = "aturner@ucsd.edu && z2yuan@ucsd.edu";
 
 //------------------------------------//
@@ -75,6 +75,52 @@ unsigned local_pattern_history_mask;
 //        Predictor Functions         //
 //------------------------------------//
 
+uint8_t
+predictor_state_to_binary_prediction(unsigned predictor_state){
+  if((predictor_state == strong_not_taken) || (predictor_state == weak_not_taken)){
+    return NOTTAKEN;
+  }
+  else if ((predictor_state == strong_taken) || (predictor_state == weak_taken)){
+    return TAKEN;
+  }
+}
+
+unsigned
+update_predictor_state(uint8_t outcome, unsigned predictor_state){
+  if(predictor_state == strong_not_taken){
+    if(outcome == TAKEN){
+      return weak_not_taken;
+    }
+    else{
+      return strong_not_taken;
+    }
+  }
+  else if(predictor_state == weak_not_taken){
+    if(outcome == TAKEN){
+      return weak_taken;
+    }
+    else{
+      return strong_not_taken;
+    }
+  }
+  else if(predictor_state == weak_taken){
+    if(outcome == TAKEN){
+      return strong_taken;
+    }
+    else{
+      return weak_taken;
+    }
+  }
+  else if(predictor_state == strong_taken){
+    if(outcome == TAKEN){
+      return strong_taken;
+    }
+    else{
+      return weak_taken;
+    }
+  }
+}
+
 void
 init_gshare()
 {
@@ -93,8 +139,8 @@ init_gshare()
 }
 
 void
-init_tournament(){
-  
+init_tournament()
+{
   //init chooser
   unsigned num_entries = (0x1 << pcIndexBits);
   unsigned chooser_size = (num_entries * unsigned_size);
@@ -161,52 +207,6 @@ init_predictor()
       
     default:
       break;
-  }
-}
-
-uint8_t
-predictor_state_to_binary_prediction(unsigned predictor_state){
-  if((predictor_state == strong_not_taken) || (predictor_state == weak_not_taken)){
-    return NOTTAKEN;
-  }
-  else if ((predictor_state == strong_taken) || (predictor_state == weak_taken)){
-    return TAKEN;
-  }
-}
-
-unsigned
-update_predictor_state(uint8_t outcome, unsigned predictor_state){
-  if(predictor_state == strong_not_taken){
-    if(outcome == TAKEN){
-      return weak_not_taken;
-    }
-    else{
-      return strong_not_taken;
-    }
-  }
-  else if(predictor_state == weak_not_taken){
-    if(outcome == TAKEN){
-      return weak_taken;
-    }
-    else{
-      return strong_not_taken;
-    }
-  }
-  else if(predictor_state == weak_taken){
-    if(outcome == TAKEN){
-      return strong_taken;
-    }
-    else{
-      return weak_taken;
-    }
-  }
-  else if(predictor_state == strong_taken){
-    if(outcome == TAKEN){
-      return strong_taken;
-    }
-    else{
-      return weak_taken;
-    }
   }
 }
 
