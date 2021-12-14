@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import torch
-import numpy as np
+# import numpy as np
 import sys
 
 NOTTAKEN = 0
@@ -21,7 +21,12 @@ class NN(torch.nn.Module):
 myNet = NN()
 
 def read():
-    data = np.loadtxt('his.txt')
+    data = []
+    for i,line in enumerate(reversed(open("his.txt").readlines())):
+        data.append(line.split(' '))
+        if i == 100000:
+            break
+    # data = np.loadtxt('his.txt')
     pc = torch.tensor(data[:, :-1]).float()
     outcome = torch.tensor(data[:, -1]).long()
     dataset = torch.utils.data.TensorDataset(pc, outcome)
@@ -60,12 +65,8 @@ def make_prediction(pc, ghistory, lhistory):
     predictions = torch.argmax(out.data, 1)
     return predictions.item()
 
-# train_predictor(234.0, 1231.0, 123.0, 0)
-# train_predictor(3453.0, 234.0, 555.0, 1)
-# print(make_prediction(3453.0, 234.0, 555.0))
-
 if __name__ == '__main__':
-    if sys.argv[1] == 'train':
+    if sys.argv[2] == 'train':
         train_predictor()
     else:
-        make_prediction(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]))
+        make_prediction(int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]))
