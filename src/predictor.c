@@ -62,7 +62,8 @@ const unsigned CORRELATED_PREDICTOR = 0x1;
 
 unsigned* chooser;
 unsigned* total_predictions;
-unsigned* mispredictions;
+unsigned* local_mispredictions;
+unsigned* global_mispredictions;
 unsigned chooser_entry_mask;
 
 unsigned* local_pattern_hist;
@@ -100,14 +101,16 @@ init_tournament(){
   
   chooser = (unsigned*)malloc(chooser_size);
   total_predictions = (unsigned*)malloc(chooser_size);
-  mispredictions = (unsigned*)malloc(chooser_size);
+  local_mispredictions = (unsigned*)malloc(chooser_size);
+  global_mispredictions = (unsigned*)malloc(chooser_size);
       
 
   int iterator;
   for(iterator = 0; iterator < num_entries; iterator++){
     chooser[iterator] = SIMPLE_BHT;
     total_predictions[iterator] = 0;
-    mispredictions[iterator] = 0;
+    local_mispredictions[iterator] = 0;
+    global_mispredictions[iterator] = 0;
   } 
 
   chooser_entry_mask = ((0x0 << (unsigned_bits - 0x1)) | ((0x1 << pcIndexBits) - 0x1));
@@ -315,21 +318,23 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome){
   total_predictions[chooser_entry] += 1;
 
 
-  //Track mispredictions and switch predictors if threshold passed
-  if(chooser[chooser_entry] == SIMPLE_BHT){
-    if(local_prediction != outcome){
-      mispredictions[chooser_entry] += 1;
-    }
-
-    //branch prediction algorithm chooser threshold but with cheating for unsigned ints
-    if((((double)mispredictions[chooser_entry]) / ((double)total_predictions[chooser_entry])) > 0.12){
-      chooser[chooser_entry] = CORRELATED_PREDICTOR;
-    }
+  //Track mispredictions
+  if(local_prediction != outcome){
+    local_mispredictions[chooser_entry] += 1;
   }
-  else{
-    if(global_prediction != outcome){
-      mispredictions[chooser_entry] += 1;
-    }
+
+  if(global_prediction != outcome){
+    global_mispredictions[chooser_entry] += 1;
+  }
+
+  double local_error  = ((double)local_mispredictions[chooser_entry])  / ((double)total_predictions[chooser_entry]);
+  double global_error = ((double)global_mispredictions[chooser_entry]) / ((double)total_predictions[chooser_entry]);
+
+  if(local_error < global_error){
+    chooser[chooser_entry] = SIMPLE_BHT;
+  }
+  else if(global_error < local_error){
+    chooser[chooser_entry] = CORRELATED_PREDICTOR;
   }
 
   //update local predictor
@@ -383,7 +388,8 @@ cleanup(){
     case TOURNAMENT:
       free(chooser);
       free(total_predictions);
-      free(mispredictions);
+      free(local_mispredictions);
+      free(global_mispredictions);
       free(local_pattern_hist);
       free(pattern_hist_predictor_state);
       free(branch_history_table);
