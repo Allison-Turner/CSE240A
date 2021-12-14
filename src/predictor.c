@@ -43,16 +43,15 @@ const unsigned weak_taken = 0x10;
 const unsigned weak_not_taken = 0x01;
 const unsigned strong_not_taken = 0x00;
 
+//size of unsigned int in bytes
+unsigned unsigned_size = sizeof(unsigned);
+//and in bits
+unsigned unsigned_bits = sizeof(unsigned) * 8;
 
 //Gshare: global with index sharing
 //Similar to gselect predictor, except the branch address and global history are combined by an XOR into a 2-bit prediction
 unsigned global_history;
 unsigned* branch_history_table;
-
-//size of unsigned int in bytes
-unsigned unsigned_size = sizeof(unsigned);
-//and in bits
-unsigned unsigned_bits = sizeof(unsigned) * 8;
 
 unsigned ghistory_mask;
 unsigned bht_entry_mask = 0x11;
@@ -145,12 +144,12 @@ init_tournament()
   //init chooser
   unsigned num_entries = (0x1 << pcIndexBits);
   unsigned chooser_size = (num_entries * unsigned_size);
-
+  
   chooser = (unsigned*)malloc(chooser_size);
   total_predictions = (unsigned*)malloc(chooser_size);
   local_mispredictions = (unsigned*)malloc(chooser_size);
   global_mispredictions = (unsigned*)malloc(chooser_size);
-
+      
 
   int iterator;
   for(iterator = 0; iterator < num_entries; iterator++){
@@ -172,7 +171,7 @@ init_tournament()
 
   unsigned pattern_hist_predictors = (0x1 << lhistoryBits);
   unsigned pht_size = (pattern_hist_predictors * unsigned_size);
-
+  
   pattern_hist_predictor_state = (unsigned*)malloc(pht_size);
 
   for(iterator = 0; iterator < pattern_hist_predictors; iterator++){
@@ -188,6 +187,7 @@ init_tournament()
 void
 init_predictor()
 {
+
   //
   //TODO: Initialize Branch Predictor Data Structures
   //
@@ -202,7 +202,7 @@ init_predictor()
       break;
 
     //custom TBD
-    case CUSTOM: ;
+    case CUSTOM:
       FILE *fp = fopen("his.txt", "w");
       fclose(fp);
       break;
@@ -211,7 +211,6 @@ init_predictor()
       break;
   }
 }
-
 
 uint8_t
 gshare_make_prediction(uint32_t pc)
@@ -227,7 +226,6 @@ tournament_make_prediction(uint32_t pc)
 
   if(chooser[chooser_entry] == SIMPLE_BHT){
     unsigned local_history_pattern = local_pattern_hist[chooser_entry];
-
     return predictor_state_to_binary_prediction(pattern_hist_predictor_state[local_history_pattern]);
   }
   else{
@@ -261,15 +259,12 @@ custom_make_prediction(uint32_t pc)
 uint8_t
 make_prediction(uint32_t pc)
 {
-  //
-  //TODO: Implement prediction scheme
-  //
-
   // Make a prediction based on the bpType
   switch (bpType) {
     case STATIC:
       return TAKEN;
       break;
+
     case GSHARE:
       return gshare_make_prediction(pc);
       break;
@@ -281,6 +276,7 @@ make_prediction(uint32_t pc)
     case CUSTOM:
       return custom_make_prediction(pc);
       break;
+
     default:
       break;
   }
@@ -303,15 +299,15 @@ gshare_train_predictor(uint32_t pc, uint8_t outcome){
 
   //NOTTAKEN
   if(outcome == 0){
+    //make sure last bit is 0
     temp = temp & ((0x1 << ghistoryBits) - 0x10);
-
   }
   //TAKEN
   else{
-    
     //make sure last bit is 1
     temp = temp + 0x1;
   }
+
   //set global hist to new val
   global_history = temp;
 }
@@ -329,7 +325,6 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome){
   unsigned global_prediction = predictor_state_to_binary_prediction(global_predictor_state);
 
   total_predictions[chooser_entry] += 1;
-
 
   //Track mispredictions
   if(local_prediction != outcome){
@@ -388,9 +383,11 @@ train_predictor(uint32_t pc, uint8_t outcome)
     case TOURNAMENT:
       tournament_train_predictor(pc, outcome);
       break;
+
     case CUSTOM:
       custom_train_predictor(pc, outcome);
       break;
+
     default:
       break;
   }
