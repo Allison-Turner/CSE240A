@@ -71,7 +71,6 @@ unsigned* local_pattern_hist;
 unsigned* pattern_hist_predictor_state;
 unsigned local_pattern_history_mask;
 
-
 //------------------------------------//
 //        Predictor Functions         //
 //------------------------------------//
@@ -227,7 +226,6 @@ tournament_make_prediction(uint32_t pc)
 
   if(chooser[chooser_entry] == SIMPLE_BHT){
     unsigned local_history_pattern = local_pattern_hist[chooser_entry];
-    
     return predictor_state_to_binary_prediction(pattern_hist_predictor_state[local_history_pattern]);
   }
   else{
@@ -327,7 +325,6 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome){
   unsigned global_prediction = predictor_state_to_binary_prediction(global_predictor_state);
 
   total_predictions[chooser_entry] += 1;
-
 
   //Track mispredictions
   if(local_prediction != outcome){
