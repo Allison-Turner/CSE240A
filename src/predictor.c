@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "predictor.h"
+#include <string.h>
 
 //
 // TODO:Student Information
@@ -244,21 +245,18 @@ tournament_make_prediction(uint32_t pc)
 uint8_t
 custom_make_prediction(uint32_t pc)
 {
-  printf("custom_make_prediction(%x)\n", pc);
+  char* formatString = "./NN.py predict %u %d %d\n";
+  char* cmd = (char*)malloc(strlen(formatString) + 64);
+  sprintf(cmd, formatString, pc, ghistoryBits, lhistoryBits);
 
-  char *commandLine;
-  sprintf(commandLine, "./NN.py predict %d %d %d", pc, ghistoryBits, lhistoryBits);
-  printf("sprintf yields: %s\n", commandLine);
-
-  FILE* fp1 = popen(commandLine, "r");
-  printf("after popen\n");
+  FILE* fp = popen(cmd, "r");
 
   char *predict;
-  fgets(predict, 60, fp1);
-  printf("%s after fgets\n", predict);
+  fgets(predict, 60, fp);
 
-  pclose(fp1);
-  printf("after pclose\n");
+  pclose(fp);
+  
+  free(cmd);
 
   return atoi(predict);
 }
@@ -298,7 +296,7 @@ make_prediction(uint32_t pc)
   }
 
   // If there is not a compatible bpType then return NOTTAKEN
-  return NOTTAKEN;
+  //return NOTTAKEN;
 }
 
 
