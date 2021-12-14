@@ -41,17 +41,23 @@ handle_option(char *arg)
 {
   if (!strcmp(arg,"--static")) {
     bpType = STATIC;
-  } else if (!strncmp(arg,"--gshare:",9)) {
+  } 
+  else if (!strncmp(arg,"--gshare:",9)) {
     bpType = GSHARE;
     sscanf(arg+9,"%d", &ghistoryBits);
-  } else if (!strncmp(arg,"--tournament:",13)) {
+  } 
+  else if (!strncmp(arg,"--tournament:",13)) {
     bpType = TOURNAMENT;
     sscanf(arg+13,"%d:%d:%d", &ghistoryBits, &lhistoryBits, &pcIndexBits);
-  } else if (!strcmp(arg,"--custom")) {
+  } 
+  else if (!strncmp(arg,"--custom:", 9)) {
     bpType = CUSTOM;
-  } else if (!strcmp(arg,"--verbose")) {
+    sscanf(arg+9,"%d:%d:%d", &ghistoryBits, &lhistoryBits, &pcIndexBits);
+  } 
+  else if (!strcmp(arg,"--verbose")) {
     verbose = 1;
-  } else {
+  } 
+  else {
     return 0;
   }
 

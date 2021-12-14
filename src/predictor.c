@@ -182,6 +182,15 @@ init_tournament()
   init_gshare();
 }
 
+void
+init_custom()
+{
+  printf("init_custom()\n");
+  printf("ghistoryBits: %i, lhistoryBits: %i, pcIndexBits: %i\n", ghistoryBits, lhistoryBits, pcIndexBits);
+  FILE *fp = fopen("his.txt", "w");
+  fclose(fp);
+}
+
 // Initialize the predictor
 //
 void
@@ -203,8 +212,7 @@ init_predictor()
 
     //custom TBD
     case CUSTOM:
-      FILE *fp = fopen("his.txt", "w");
-      fclose(fp);
+      init_custom();
       break;
       
     default:
@@ -236,14 +244,22 @@ tournament_make_prediction(uint32_t pc)
 uint8_t
 custom_make_prediction(uint32_t pc)
 {
-  //int myPrediction = make_prediction(pc, ghistoryBits, lhistoryBits);
-  FILE *fp;
+  printf("custom_make_prediction(%x)\n", pc);
+
   char *commandLine;
   sprintf(commandLine, "./NN.py predict %d %d %d", pc, ghistoryBits, lhistoryBits);
-  fp = popen(commandLine, "r");
+  printf("sprintf yields: %s\n", commandLine);
+
+  FILE* fp1 = popen(commandLine, "r");
+  printf("after popen\n");
+
   char *predict;
-  fgets(predict, 60, fp);
-  pclose(fp);
+  fgets(predict, 60, fp1);
+  printf("%s after fgets\n", predict);
+
+  pclose(fp1);
+  printf("after pclose\n");
+
   return atoi(predict);
 }
 
@@ -355,6 +371,7 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome){
 
 void
 custom_train_predictor(uint32_t pc, uint8_t outcome){
+  printf("custom_train_predictor()\n");
   FILE *fp;
   fp = fopen("his.txt", "a");
   fprintf(fp, "%d %d %d %d\n", pc, ghistoryBits, lhistoryBits, outcome);
