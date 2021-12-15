@@ -21,11 +21,12 @@ class NN(torch.nn.Module):
 myNet = NN()
 
 def read():
-    data = []
+    raw = []
     for i,line in enumerate(reversed(open("his.txt").readlines())):
-        data.append(line.split(' '))
-        if i == 100000:
+        raw.append([int(x) for x in line.split(' ')])
+        if i == 10000:
             break
+    data = torch.tensor(raw)
     # data = np.loadtxt('his.txt')
     pc = torch.tensor(data[:, :-1]).float()
     outcome = torch.tensor(data[:, -1]).long()
@@ -42,14 +43,14 @@ def train_predictor():
         for (pc, outcome) in history:
             optimizer.zero_grad()
             output = net(pc)
-            loss = lossFunc(output, torch.max(outcome, 1)[1])
+            loss = lossFunc(output, outcome)
             loss.backward()
             optimizer.step()
         with torch.no_grad():
             sum = 0
             for (pc, outcome) in history:
                 output = net(pc)
-                loss = lossFunc(output, torch.max(outcome, 1)[1])
+                loss = lossFunc(output, outcome)
                 sum += loss
             ave = sum / len(history)
             if ave < best:
@@ -61,12 +62,13 @@ def train_predictor():
 
 def make_prediction(pc, ghistory, lhistory):
     myNet.load_state_dict(torch.load('./mynn.pt'))
-    out = myNet(torch.tensor([[pc, ghistory, lhistory]]))
+    out = myNet(torch.tensor([[pc, ghistory, lhistory]]).float())
     predictions = torch.argmax(out.data, 1)
     return predictions.item()
 
 if __name__ == '__main__':
-    if sys.argv[2] == 'train':
+    if sys.argv[1] == 'train':
         train_predictor()
     else:
-        make_prediction(int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]))
+        # make_prediction(int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]))
+        print(make_prediction(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])))
