@@ -46,6 +46,7 @@ const unsigned strong_not_taken = 0x00;
 
 //size of unsigned int in bytes
 unsigned unsigned_size = sizeof(unsigned);
+unsigned signed_size = sizeof(signed);
 //and in bits
 unsigned unsigned_bits = sizeof(unsigned) * 8;
 
@@ -71,6 +72,12 @@ unsigned chooser_entry_mask;
 unsigned* local_pattern_hist;
 unsigned* pattern_hist_predictor_state;
 unsigned local_pattern_history_mask;
+
+//Custom
+unsigned* func;
+unsigned learning_rate = 1;
+unsigned threshold = 10;
+unsigned pc_mask;
 
 //------------------------------------//
 //        Predictor Functions         //
@@ -186,10 +193,29 @@ init_tournament()
 void
 init_custom()
 {
-  printf("init_custom()\n");
-  printf("ghistoryBits: %i, lhistoryBits: %i, pcIndexBits: %i\n", ghistoryBits, lhistoryBits, pcIndexBits);
-  FILE *fp = fopen("his.txt", "w");
-  fclose(fp);
+  // FILE *fp = fopen("his.txt", "w");
+  // fclose(fp);
+
+  // 
+  threshold = ghistoryBits;
+  unsigned num_entries = (0x1 << pcIndexBits);
+  unsigned num_lhis = (0x1 << lhistoryBits);
+  unsigned f_size = (num_entries * signed_size * num_lhis);
+  unsigned chooser_size = (num_entries * unsigned_size);
+  
+  chooser = (unsigned*)malloc(chooser_size);
+
+  func = (signed*)malloc(f_size);
+  for(int i = 0; i <num_entries; i++){
+    chooser[i]= SIMPLE_BHT;
+  }
+
+  for(int i = 0; i <num_entries; i++){
+    for (int j = 0; j < num_lhis; j++){
+      func[i*num_lhis + j] = 10;
+    }
+  }
+      
 }
 
 // Initialize the predictor
@@ -245,20 +271,31 @@ tournament_make_prediction(uint32_t pc)
 uint8_t
 custom_make_prediction(uint32_t pc)
 {
-  char* formatString = "./NN.py predict %u %d %d\n";
-  char* cmd = (char*)malloc(strlen(formatString) + 64);
-  sprintf(cmd, formatString, pc, ghistoryBits, lhistoryBits);
+  // char* formatString = "stdbuf -oL python3 ./NN.py predict %u %d %d\n";
+  // char* cmd = (char*)malloc(strlen(formatString) + 64);
+  // sprintf(cmd, formatString, pc, ghistoryBits, lhistoryBits);
 
-  FILE* fp = popen(cmd, "r");
+  // FILE* fp = popen(cmd, "r");
 
-  char *predict;
-  fgets(predict, 60, fp);
+  // char *predict = malloc(60);
+  // fgets(predict, 60, fp);
 
-  pclose(fp);
+  // pclose(fp);
   
-  free(cmd);
+  // free(cmd);
 
-  return atoi(predict);
+  // return atoi(predict);
+  unsigned num_lhis = (0x1 << lhistoryBits);
+  pc_mask = ((0x1 << pcIndexBits) - 0x1);
+  unsigned chooser_entry = pc & pc_mask;
+  unsigned lhistory = chooser[chooser_entry];
+  int score = 0;
+  for(int i =0; i< lhistoryBits; i++){
+    score += func[chooser_entry*num_lhis + i] * (lhistory & 0x1);
+    lhistory = lhistory >> 1;
+  }
+  if(score >= threshold) return TAKEN;
+  else return NOTTAKEN;
 }
 
 // Make a prediction for conditional branch instruction at PC 'pc'
@@ -369,15 +406,45 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome){
 
 void
 custom_train_predictor(uint32_t pc, uint8_t outcome){
-  printf("custom_train_predictor()\n");
-  FILE *fp;
-  fp = fopen("his.txt", "a");
-  fprintf(fp, "%d %d %d %d\n", pc, ghistoryBits, lhistoryBits, outcome);
-  fclose(fp);
-  // char *commandLine;
-  // sprintf(commandLine, "./NN.py train %d %d %d %d", pc, ghistoryBits, lhistoryBits, outcome);
-  fp = popen("./NN.py train", "r");
-  pclose(fp);
+  // FILE *fp;
+  // fp = fopen("his.txt", "a");
+  // fprintf(fp, "%d %d %d %d\n", pc, ghistoryBits, lhistoryBits, outcome);
+  // fclose(fp);
+  // printf("Opening...\n");
+  // fp = popen("stdbuf -oL python3 ./NN.py train 0 0 0", "r");
+  // printf("Closing...\n");
+  // pclose(fp);
+  // printf("Closed.\n");
+  unsigned num_lhis = (0x1 << lhistoryBits);
+  pc_mask = ((0x1 << pcIndexBits) - 0x1);
+
+  unsigned chooser_entry = pc & pc_mask;
+  unsigned lhistory = chooser[chooser_entry];
+
+  unsigned temp = ((0x1 << lhistoryBits) - 0x1) & (lhistory << 1);
+
+  //NOTTAKEN
+  if(outcome == 0){
+    //make sure last bit is 0
+    temp = temp & ((0x1 << lhistoryBits) - 0x10);
+  }
+  //TAKEN
+  else{
+    //make sure last bit is 1
+    temp = temp + 0x1;
+    lhistory = temp;
+    for(int i =0; i < lhistoryBits; i++){
+      
+      if(lhistory & 0x1){
+        func[chooser_entry*num_lhis + i] += learning_rate;
+      }else{
+        func[chooser_entry*num_lhis + i] -= learning_rate;
+      }
+      lhistory = lhistory >> 1;
+    }
+  }
+  chooser[chooser_entry] = temp;
+
 }
 
 // Train the predictor the last executed branch at PC 'pc' and with
@@ -426,6 +493,7 @@ cleanup(){
       break;
 
     case CUSTOM:
+      free(func);
       break;
 
     default:
