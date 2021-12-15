@@ -74,6 +74,8 @@ unsigned* pattern_hist_predictor_state;
 unsigned local_pattern_history_mask;
 
 //Custom
+unsigned custom_local_prediction;
+unsigned custom_global_prediction;
 unsigned* func;
 unsigned learning_rate = 1;
 unsigned threshold = 10;
@@ -202,12 +204,29 @@ init_custom()
   unsigned num_lhis = (0x1 << lhistoryBits);
   unsigned f_size = (num_entries * signed_size * num_lhis);
   unsigned chooser_size = (num_entries * unsigned_size);
-  
+
   chooser = (unsigned*)malloc(chooser_size);
+  total_predictions = (unsigned*)malloc(chooser_size);
+  local_mispredictions = (unsigned*)malloc(chooser_size);
+  global_mispredictions = (unsigned*)malloc(chooser_size);
+
+  int iterator;
+  for(iterator = 0; iterator < num_entries; iterator++){
+    chooser[iterator] = SIMPLE_BHT;
+    total_predictions[iterator] = 0;
+    local_mispredictions[iterator] = 0;
+    global_mispredictions[iterator] = 0;
+  } 
+
+  chooser_entry_mask = ((0x0 << (unsigned_bits - 0x1)) | ((0x1 << pcIndexBits) - 0x1));
+
+
+  
+  local_pattern_hist = (unsigned*)malloc(chooser_size);
 
   func = (signed*)malloc(f_size);
   for(int i = 0; i <num_entries; i++){
-    chooser[i]= SIMPLE_BHT;
+    local_pattern_hist[i]= SIMPLE_BHT;
   }
 
   for(int i = 0; i <num_entries; i++){
@@ -215,6 +234,7 @@ init_custom()
       func[i*num_lhis + j] = 10;
     }
   }
+  init_gshare();
       
 }
 
@@ -285,17 +305,26 @@ custom_make_prediction(uint32_t pc)
   // free(cmd);
 
   // return atoi(predict);
+
+// unsigned chooser_entry = pc & chooser_entry_mask;
+unsigned chooser_entry = pc & pc_mask;
+  if(chooser[chooser_entry] != SIMPLE_BHT){
+    unsigned local_history_pattern = local_pattern_hist[chooser_entry];
+    custom_global_prediction = gshare_make_prediction(pc);
+    return custom_global_prediction;
+  }
+
   unsigned num_lhis = (0x1 << lhistoryBits);
   pc_mask = ((0x1 << pcIndexBits) - 0x1);
-  unsigned chooser_entry = pc & pc_mask;
-  unsigned lhistory = chooser[chooser_entry];
+  
+  unsigned lhistory = local_pattern_hist[chooser_entry];
   int score = 0;
   for(int i =0; i< lhistoryBits; i++){
     score += func[chooser_entry*num_lhis + i] * (lhistory & 0x1);
     lhistory = lhistory >> 1;
   }
-  if(score >= threshold) return TAKEN;
-  else return NOTTAKEN;
+  if(score >= threshold) {return TAKEN; custom_local_prediction = TAKEN;}
+  else {return NOTTAKEN; custom_local_prediction = NOTTAKEN;}
 }
 
 // Make a prediction for conditional branch instruction at PC 'pc'
@@ -419,7 +448,29 @@ custom_train_predictor(uint32_t pc, uint8_t outcome){
   pc_mask = ((0x1 << pcIndexBits) - 0x1);
 
   unsigned chooser_entry = pc & pc_mask;
-  unsigned lhistory = chooser[chooser_entry];
+  unsigned lhistory = local_pattern_hist[chooser_entry];
+
+  total_predictions[chooser_entry] += 1;
+
+  //Track mispredictions
+  if(custom_local_prediction != outcome){
+    local_mispredictions[chooser_entry] += 1;
+  }
+
+  if(custom_global_prediction != outcome){
+    global_mispredictions[chooser_entry] += 1;
+  }
+
+  double local_error  = ((double)local_mispredictions[chooser_entry])  / ((double)total_predictions[chooser_entry]);
+  double global_error = ((double)global_mispredictions[chooser_entry]) / ((double)total_predictions[chooser_entry]);
+
+  if(local_error < global_error){
+    chooser[chooser_entry] = SIMPLE_BHT;
+  }
+  else if(global_error < local_error){
+    chooser[chooser_entry] = CORRELATED_PREDICTOR;
+  }
+
 
   unsigned temp = ((0x1 << lhistoryBits) - 0x1) & (lhistory << 1);
 
@@ -443,8 +494,9 @@ custom_train_predictor(uint32_t pc, uint8_t outcome){
       lhistory = lhistory >> 1;
     }
   }
-  chooser[chooser_entry] = temp;
+  local_pattern_hist[chooser_entry] = temp;
 
+  gshare_train_predictor(pc, outcome);
 }
 
 // Train the predictor the last executed branch at PC 'pc' and with
@@ -493,7 +545,13 @@ cleanup(){
       break;
 
     case CUSTOM:
+      free(chooser);
+      free(total_predictions);
+      free(local_mispredictions);
+      free(global_mispredictions);
       free(func);
+      free(local_pattern_hist);
+      free(branch_history_table);
       break;
 
     default:
