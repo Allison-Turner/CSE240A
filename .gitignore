@@ -1,4 +1,5 @@
 *.o
 src/predictor
+his.txt
 hist.txt
 mynn.pt
