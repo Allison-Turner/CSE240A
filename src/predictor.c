@@ -76,7 +76,7 @@ unsigned local_pattern_history_mask;
 //Custom
 unsigned custom_local_prediction;
 unsigned custom_global_prediction;
-unsigned* func;
+signed* func;
 unsigned learning_rate = 1;
 unsigned threshold = 10;
 unsigned pc_mask;
@@ -199,9 +199,9 @@ init_custom()
   // fclose(fp);
 
   // 
-  threshold = ghistoryBits;
+  threshold = 1;
   unsigned num_entries = (0x1 << pcIndexBits);
-  unsigned num_lhis = (0x1 << lhistoryBits);
+  unsigned num_lhis = (lhistoryBits);
   unsigned f_size = (num_entries * signed_size * num_lhis);
   unsigned chooser_size = (num_entries * unsigned_size);
 
@@ -231,7 +231,7 @@ init_custom()
 
   for(int i = 0; i <num_entries; i++){
     for (int j = 0; j < num_lhis; j++){
-      func[i*num_lhis + j] = 10;
+      func[i*num_lhis + j] = 1;
     }
   }
   init_gshare();
@@ -308,13 +308,13 @@ custom_make_prediction(uint32_t pc)
 
 // unsigned chooser_entry = pc & chooser_entry_mask;
 unsigned chooser_entry = pc & pc_mask;
-  if(chooser[chooser_entry] != SIMPLE_BHT){
+  if(1){
     unsigned local_history_pattern = local_pattern_hist[chooser_entry];
     custom_global_prediction = gshare_make_prediction(pc);
-    return custom_global_prediction;
+    
   }
 
-  unsigned num_lhis = (0x1 << lhistoryBits);
+  unsigned num_lhis = (lhistoryBits);
   pc_mask = ((0x1 << pcIndexBits) - 0x1);
   
   unsigned lhistory = local_pattern_hist[chooser_entry];
@@ -323,8 +323,13 @@ unsigned chooser_entry = pc & pc_mask;
     score += func[chooser_entry*num_lhis + i] * (lhistory & 0x1);
     lhistory = lhistory >> 1;
   }
-  if(score >= threshold) {return TAKEN; custom_local_prediction = TAKEN;}
-  else {return NOTTAKEN; custom_local_prediction = NOTTAKEN;}
+  if(score >= threshold) {custom_local_prediction = TAKEN; }
+  else {custom_local_prediction = NOTTAKEN;}
+
+  if(chooser[chooser_entry] != SIMPLE_BHT){
+    return custom_global_prediction;
+  } else
+    return custom_local_prediction;
 }
 
 // Make a prediction for conditional branch instruction at PC 'pc'
@@ -444,7 +449,7 @@ custom_train_predictor(uint32_t pc, uint8_t outcome){
   // printf("Closing...\n");
   // pclose(fp);
   // printf("Closed.\n");
-  unsigned num_lhis = (0x1 << lhistoryBits);
+  unsigned num_lhis = (lhistoryBits);
   pc_mask = ((0x1 << pcIndexBits) - 0x1);
 
   unsigned chooser_entry = pc & pc_mask;
@@ -471,7 +476,7 @@ custom_train_predictor(uint32_t pc, uint8_t outcome){
     chooser[chooser_entry] = CORRELATED_PREDICTOR;
   }
 
-
+  
   unsigned temp = ((0x1 << lhistoryBits) - 0x1) & (lhistory << 1);
 
   //NOTTAKEN
